@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Plugin.Maui.Shimmer.Example.MainPage"
+             Title="Shimmer">
+
+    <!-- Placeholder page. Swap this in once the shimmer control lands in
+         src/Plugin.Maui.Shimmer. -->
+    <VerticalStackLayout Padding="24" Spacing="12" VerticalOptions="Center">
+        <Label Text="Plugin.Maui.Shimmer"
+               FontSize="24"
+               HorizontalOptions="Center" />
+        <Label Text="Example app scaffold — no shimmer control wired up yet."
+               HorizontalOptions="Center"
+               HorizontalTextAlignment="Center" />
+    </VerticalStackLayout>
+
+</ContentPage>

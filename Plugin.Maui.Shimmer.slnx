@@ -1,0 +1,13 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/example/">
+    <Project Path="example/Plugin.Maui.Shimmer.Example/Plugin.Maui.Shimmer.Example.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Plugin.Maui.Shimmer/Plugin.Maui.Shimmer.csproj" />
+  </Folder>
+</Solution>
