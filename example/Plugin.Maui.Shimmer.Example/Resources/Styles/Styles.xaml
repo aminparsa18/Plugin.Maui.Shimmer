@@ -18,9 +18,11 @@
         <Setter Property="StrokeThickness" Value="1"/>
     </Style>
 
-    <Style TargetType="BoxView">
-        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Gray950}, Dark={StaticResource Gray200}}" />
-    </Style>
+    <!-- Deliberately no BackgroundColor setter here: BoxView paints its fill via Color, and
+         BackgroundColor renders as a separate, always-rectangular layer behind it — on a rounded
+         BoxView (CornerRadius set) that shows through as a square corner-poking out from under the
+         rounded fill. The default template set one; it's removed rather than left as a trap. -->
+    <Style TargetType="BoxView" />
 
     <Style TargetType="Button">
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}" />

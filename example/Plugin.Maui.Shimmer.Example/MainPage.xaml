@@ -1,18 +1,279 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:shimmer="clr-namespace:Plugin.Maui.Shimmer;assembly=Plugin.Maui.Shimmer"
              x:Class="Plugin.Maui.Shimmer.Example.MainPage"
-             Title="Shimmer">
+             Title="Shimmer"
+             Shell.NavBarIsVisible="False">
 
-    <!-- Placeholder page. Swap this in once the shimmer control lands in
-         src/Plugin.Maui.Shimmer. -->
-    <VerticalStackLayout Padding="24" Spacing="12" VerticalOptions="Center">
-        <Label Text="Plugin.Maui.Shimmer"
-               FontSize="24"
-               HorizontalOptions="Center" />
-        <Label Text="Example app scaffold — no shimmer control wired up yet."
-               HorizontalOptions="Center"
-               HorizontalTextAlignment="Center" />
-    </VerticalStackLayout>
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Color x:Key="BrandColor">#7B68F0</Color>
+            <Color x:Key="BrandDeep">#4C3FB0</Color>
+            <Color x:Key="PageBg">#F4F5FA</Color>
+            <Color x:Key="PageBgDark">#121218</Color>
+            <Color x:Key="CardBg">#FFFFFF</Color>
+            <Color x:Key="CardBgDark">#1E1E2A</Color>
+            <Color x:Key="TextPrimary">#1E2233</Color>
+            <Color x:Key="TextPrimaryDark">#F2F3F8</Color>
+            <Color x:Key="TextSecondary">#6B7280</Color>
+            <Color x:Key="TextSecondaryDark">#9AA3B8</Color>
+            <Color x:Key="PillBg">#1E2233</Color>
+            <Color x:Key="PillBgDark">#2A2E3D</Color>
+            <Color x:Key="Bone">#C9CDD6</Color>
+            <Color x:Key="BoneDark">#3A3D48</Color>
+
+            <LinearGradientBrush x:Key="HeaderBrush" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="{StaticResource BrandColor}" Offset="0.0" />
+                <GradientStop Color="{StaticResource BrandDeep}" Offset="1.0" />
+            </LinearGradientBrush>
+
+            <Shadow x:Key="CardShadow" Brush="Black" Opacity="0.08" Radius="10" Offset="0,3" />
+
+            <!-- Shared card chrome — used by both the skeleton cards (inside ShimmerLayout) and the
+                 real cards (in RealContent), so the two stacks line up pixel-for-pixel when one is
+                 swapped for the other. -->
+            <!-- IsContainer="True": a Border isn't a Layout, so ShimmerLayout would otherwise capture
+                 it as one leaf shape covering its whole bounds. Setting this flattens the shimmer
+                 into the Border's Content instead, so the avatar circle and text bars inside shimmer
+                 individually. The attached property is only read by ShimmerLayout's extraction, so
+                 it's inert (and harmless) on the real-content cards, which are never wrapped in one. -->
+            <Style x:Key="MemberCard" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource CardBg}, Dark={StaticResource CardBgDark}}" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 18" />
+                <Setter Property="StrokeThickness" Value="0" />
+                <Setter Property="Shadow" Value="{StaticResource CardShadow}" />
+                <Setter Property="Padding" Value="14" />
+                <Setter Property="shimmer:ShimmerLayout.IsContainer" Value="True" />
+            </Style>
+
+            <Style x:Key="Avatar" TargetType="Border">
+                <Setter Property="WidthRequest" Value="56" />
+                <Setter Property="HeightRequest" Value="56" />
+                <Setter Property="StrokeThickness" Value="0" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 28" />
+            </Style>
+
+            <Style x:Key="AvatarInitials" TargetType="Label">
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="HorizontalOptions" Value="Center" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+
+            <Style x:Key="MemberName" TargetType="Label">
+                <Setter Property="FontFamily" Value="OpenSansSemibold" />
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
+            </Style>
+
+            <Style x:Key="MemberRole" TargetType="Label">
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource TextSecondaryDark}}" />
+            </Style>
+
+            <!-- Skeleton placeholders — plain BoxViews standing in for the avatar/text that ShimmerLayout
+                 sweeps over. These are what the shimmer is *for*; the real content below is a
+                 completely separate layout, never itself wrapped in ShimmerLayout. -->
+            <Style x:Key="AvatarPlaceholder" TargetType="BoxView">
+                <Setter Property="WidthRequest" Value="56" />
+                <Setter Property="HeightRequest" Value="56" />
+                <Setter Property="CornerRadius" Value="28" />
+                <Setter Property="Color" Value="{AppThemeBinding Light={StaticResource Bone}, Dark={StaticResource BoneDark}}" />
+            </Style>
+
+            <Style x:Key="TextPlaceholder" TargetType="BoxView">
+                <Setter Property="HeightRequest" Value="14" />
+                <Setter Property="CornerRadius" Value="7" />
+                <Setter Property="HorizontalOptions" Value="Start" />
+                <Setter Property="Color" Value="{AppThemeBinding Light={StaticResource Bone}, Dark={StaticResource BoneDark}}" />
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*"
+          BackgroundColor="{AppThemeBinding Light={StaticResource PageBg}, Dark={StaticResource PageBgDark}}">
+
+        <!-- Header — matches the family look of the other Plugin.Maui example apps. -->
+        <Border Grid.Row="0"
+                Background="{StaticResource HeaderBrush}"
+                StrokeShape="RoundRectangle 0,0,28,28"
+                StrokeThickness="0"
+                Padding="24,48,24,26">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <VerticalStackLayout Grid.Column="0" Spacing="4" VerticalOptions="Center">
+                    <Label Text="SHIMMER DEMO"
+                           FontSize="11"
+                           CharacterSpacing="1.5"
+                           FontAttributes="Bold"
+                           TextColor="#E3DEFB" />
+                    <Label Text="Team Directory"
+                           FontFamily="OpenSansSemibold"
+                           FontSize="30"
+                           TextColor="White" />
+                    <Label FontSize="13"
+                           TextColor="#EDEAFC"
+                           Text="Skeleton placeholders shimmer while loading, then swap for the real cards — tap Reload to replay it." />
+                </VerticalStackLayout>
+
+                <!-- Reload — drives a real IsLoading on/off cycle, not just a static toggle. -->
+                <Border Grid.Column="1"
+                        x:Name="ReloadBorder"
+                        VerticalOptions="Center"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 22"
+                        BackgroundColor="#2E2350">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnReloadTapped" />
+                    </Border.GestureRecognizers>
+                    <Label x:Name="ReloadLabel"
+                           Text="↻  Reload"
+                           Padding="18,12"
+                           FontFamily="OpenSansSemibold"
+                           FontSize="14"
+                           TextColor="White" />
+                </Border>
+            </Grid>
+        </Border>
+
+        <ScrollView Grid.Row="1">
+            <!-- Skeleton and real content are two independent stacks occupying the same Grid cell —
+                 never the same tree. ShimmerLayout only ever wraps the skeleton's placeholder boxes;
+                 it never sees a real Label or the real data. Loading is "skeleton visible, real
+                 content hidden"; done is the opposite, crossed over with a fade rather than a hard
+                 cut — see MainPage.xaml.cs. -->
+            <Grid Padding="16,20,16,40">
+
+                <shimmer:ShimmerLayout x:Name="Shimmer"
+                                        IsLoading="True"
+                                        Duration="1100"
+                                        GradientSize="0.5"
+                                        BackgroundGradientColor="{AppThemeBinding Light={StaticResource Bone}, Dark={StaticResource BoneDark}}"
+                                        ForegroundGradientColor="{AppThemeBinding Light=White, Dark=#6B7280}">
+                    <VerticalStackLayout Spacing="12">
+
+                        <Border Style="{StaticResource MemberCard}">
+                            <Grid ColumnDefinitions="56,*" ColumnSpacing="12">
+                                <BoxView Grid.Column="0" Style="{StaticResource AvatarPlaceholder}" />
+                                <VerticalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                                    <BoxView Style="{StaticResource TextPlaceholder}" WidthRequest="140" />
+                                    <BoxView Style="{StaticResource TextPlaceholder}" WidthRequest="190" HeightRequest="11" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource MemberCard}">
+                            <Grid ColumnDefinitions="56,*" ColumnSpacing="12">
+                                <BoxView Grid.Column="0" Style="{StaticResource AvatarPlaceholder}" />
+                                <VerticalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                                    <BoxView Style="{StaticResource TextPlaceholder}" WidthRequest="110" />
+                                    <BoxView Style="{StaticResource TextPlaceholder}" WidthRequest="170" HeightRequest="11" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource MemberCard}">
+                            <Grid ColumnDefinitions="56,*" ColumnSpacing="12">
+                                <BoxView Grid.Column="0" Style="{StaticResource AvatarPlaceholder}" />
+                                <VerticalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                                    <BoxView Style="{StaticResource TextPlaceholder}" WidthRequest="130" />
+                                    <BoxView Style="{StaticResource TextPlaceholder}" WidthRequest="150" HeightRequest="11" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource MemberCard}">
+                            <Grid ColumnDefinitions="56,*" ColumnSpacing="12">
+                                <BoxView Grid.Column="0" Style="{StaticResource AvatarPlaceholder}" />
+                                <VerticalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                                    <BoxView Style="{StaticResource TextPlaceholder}" WidthRequest="120" />
+                                    <BoxView Style="{StaticResource TextPlaceholder}" WidthRequest="180" HeightRequest="11" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+
+                    </VerticalStackLayout>
+                </shimmer:ShimmerLayout>
+
+                <VerticalStackLayout x:Name="RealContent" Spacing="12" IsVisible="False" Opacity="0">
+
+                    <Border Style="{StaticResource MemberCard}">
+                        <Grid ColumnDefinitions="56,*" ColumnSpacing="12">
+                            <Border Grid.Column="0" Style="{StaticResource Avatar}" BackgroundColor="#7B68F0">
+                                <Label Style="{StaticResource AvatarInitials}" Text="AC" />
+                            </Border>
+                            <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
+                                <Label Style="{StaticResource MemberName}" Text="Ava Chen" />
+                                <Label Style="{StaticResource MemberRole}" Text="Product Designer · Design Systems" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource MemberCard}">
+                        <Grid ColumnDefinitions="56,*" ColumnSpacing="12">
+                            <Border Grid.Column="0" Style="{StaticResource Avatar}" BackgroundColor="#3FA9A0">
+                                <Label Style="{StaticResource AvatarInitials}" Text="ML" />
+                            </Border>
+                            <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
+                                <Label Style="{StaticResource MemberName}" Text="Marcus Liu" />
+                                <Label Style="{StaticResource MemberRole}" Text="Backend Engineer · Platform Team" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource MemberCard}">
+                        <Grid ColumnDefinitions="56,*" ColumnSpacing="12">
+                            <Border Grid.Column="0" Style="{StaticResource Avatar}" BackgroundColor="#E0A339">
+                                <Label Style="{StaticResource AvatarInitials}" Text="PN" />
+                            </Border>
+                            <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
+                                <Label Style="{StaticResource MemberName}" Text="Priya Nair" />
+                                <Label Style="{StaticResource MemberRole}" Text="Mobile Engineer · .NET MAUI" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource MemberCard}">
+                        <Grid ColumnDefinitions="56,*" ColumnSpacing="12">
+                            <Border Grid.Column="0" Style="{StaticResource Avatar}" BackgroundColor="#D9738F">
+                                <Label Style="{StaticResource AvatarInitials}" Text="SO" />
+                            </Border>
+                            <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
+                                <Label Style="{StaticResource MemberName}" Text="Sam Okafor" />
+                                <Label Style="{StaticResource MemberRole}" Text="QA Lead · Release Engineering" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+
+                </VerticalStackLayout>
+
+            </Grid>
+        </ScrollView>
+
+        <!-- Status pill — floats over the list instead of a plain caption. -->
+        <Border Grid.Row="1"
+                HorizontalOptions="Center"
+                VerticalOptions="End"
+                Margin="0,0,0,20"
+                Padding="16,10"
+                StrokeThickness="0"
+                StrokeShape="RoundRectangle 20"
+                BackgroundColor="{AppThemeBinding Light={StaticResource PillBg}, Dark={StaticResource PillBgDark}}"
+                Shadow="{StaticResource CardShadow}">
+            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                <BoxView x:Name="StatusDot"
+                         WidthRequest="8"
+                         HeightRequest="8"
+                         CornerRadius="4"
+                         Color="{StaticResource BrandColor}" />
+                <Label x:Name="StatusLabel"
+                       Text="Loading…"
+                       FontSize="13"
+                       TextColor="White" />
+            </HorizontalStackLayout>
+        </Border>
+
+    </Grid>
 
 </ContentPage>
