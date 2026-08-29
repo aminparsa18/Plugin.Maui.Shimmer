@@ -23,7 +23,42 @@ internal sealed class ShimmerDrawable : IDrawable
 {
     /// <summary>Elements to paint this frame, already root-relative and with corner
     /// radius/padding resolved — see <see cref="ShimmerLayout"/>.</summary>
-    public IReadOnlyList<ShimmerVisualElement> Elements { get; set; } = [];
+    /// <remarks>Set once per shimmer cycle by <see cref="ShimmerLayout.ExtractVisualElements"/>, not
+    /// on every animation tick, so the geometry is static for the life of a cycle. The setter builds
+    /// the combined <see cref="PathF"/> once here rather than <see cref="Draw"/> rebuilding it from
+    /// scratch on every frame.</remarks>
+    public IReadOnlyList<ShimmerVisualElement> Elements
+    {
+        get => elements;
+        set
+        {
+            elements = value;
+
+            elementsPath?.Dispose();
+            elementsPath = BuildPath(value);
+        }
+    }
+
+    IReadOnlyList<ShimmerVisualElement> elements = [];
+    PathF? elementsPath;
+
+    static PathF BuildPath(IReadOnlyList<ShimmerVisualElement> elements)
+    {
+        var path = new PathF();
+        foreach (var element in elements)
+        {
+            path.AppendRoundedRectangle(
+                new RectF(element.X - (float)element.Padding.Left, element.Y - (float)element.Padding.Top,
+                    element.Width + (float)element.Padding.HorizontalThickness,
+                    element.Height + (float)element.Padding.VerticalThickness),
+                (float)element.CornerRadius.TopLeft,
+                (float)element.CornerRadius.TopRight,
+                (float)element.CornerRadius.BottomLeft,
+                (float)element.CornerRadius.BottomRight);
+        }
+
+        return path;
+    }
 
     /// <summary>The base (resting) color, painted everywhere the highlight band isn't currently over.</summary>
     public Color BackgroundColor { get; set; } = Colors.Transparent;
@@ -46,34 +81,52 @@ internal sealed class ShimmerDrawable : IDrawable
     /// caller doesn't need to pre-clamp.</summary>
     public float Progress { get; set; }
 
+    // Reused across frames instead of rebuilding a LinearGradientPaint (and its three
+    // PaintGradientStops) on every tick. Only the stop offsets change frame to frame; the stops'
+    // colors and the gradient's direction are rebuilt lazily, only when those inputs actually
+    // change (e.g. a new shimmer cycle). PaintGradientStop.Offset/Color and GradientPaint's
+    // direction are all mutable, and canvas.SetFillPaint resolves the native paint fresh from
+    // whatever state this instance holds each call, so mutating in place is safe.
+    LinearGradientPaint? gradient;
+    PaintGradientStop? leadingStop;
+    PaintGradientStop? centerStop;
+    PaintGradientStop? trailingStop;
+    Color cachedBackgroundColor = Colors.Transparent;
+    Color cachedForegroundColor = Colors.Transparent;
+    Point cachedDirectionStart;
+    Point cachedDirectionEnd;
+
     public void Draw(ICanvas canvas, RectF dirtyRect)
     {
-        if (Elements.Count == 0)
+        if (elementsPath is not { } path || elements.Count == 0)
             return;
-
-        using var path = new PathF();
-        foreach (var element in Elements)
-        {
-            path.AppendRoundedRectangle(
-                new RectF(element.X - (float)element.Padding.Left, element.Y - (float)element.Padding.Top,
-                    element.Width + (float)element.Padding.HorizontalThickness,
-                    element.Height + (float)element.Padding.VerticalThickness),
-                (float)element.CornerRadius.TopLeft,
-                (float)element.CornerRadius.TopRight,
-                (float)element.CornerRadius.BottomLeft,
-                (float)element.CornerRadius.BottomRight);
-        }
 
         var trailingEdge = Math.Clamp(Progress, 0f, 1f);
         var leadingEdge = Math.Clamp(Progress - WaveWidthFraction, 0f, 1f);
         var center = Math.Clamp(Progress - WaveWidthFraction / 2f, 0f, 1f);
 
-        var gradient = new LinearGradientPaint(
-        [
-            new PaintGradientStop(leadingEdge, BackgroundColor),
-            new PaintGradientStop(center, ForegroundColor),
-            new PaintGradientStop(trailingEdge, BackgroundColor),
-        ], DirectionStart, DirectionEnd);
+        if (gradient is null
+            || cachedBackgroundColor != BackgroundColor
+            || cachedForegroundColor != ForegroundColor
+            || cachedDirectionStart != DirectionStart
+            || cachedDirectionEnd != DirectionEnd)
+        {
+            leadingStop = new PaintGradientStop(leadingEdge, BackgroundColor);
+            centerStop = new PaintGradientStop(center, ForegroundColor);
+            trailingStop = new PaintGradientStop(trailingEdge, BackgroundColor);
+            gradient = new LinearGradientPaint([leadingStop, centerStop, trailingStop], DirectionStart, DirectionEnd);
+
+            cachedBackgroundColor = BackgroundColor;
+            cachedForegroundColor = ForegroundColor;
+            cachedDirectionStart = DirectionStart;
+            cachedDirectionEnd = DirectionEnd;
+        }
+        else
+        {
+            leadingStop!.Offset = leadingEdge;
+            centerStop!.Offset = center;
+            trailingStop!.Offset = trailingEdge;
+        }
 
         // Fixed reference rect (the combined bounds of everything we're about to fill) — only the
         // stop offsets above move from frame to frame. See the class remarks.
