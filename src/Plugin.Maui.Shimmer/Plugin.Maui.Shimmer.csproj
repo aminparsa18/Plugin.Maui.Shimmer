@@ -15,7 +15,7 @@
 	<PropertyGroup>
 		<!-- NuGet package metadata -->
 		<PackageId>Plugin.Maui.Shimmer</PackageId>
-		<Version>0.1.0</Version>
+		<Version>0.1.1</Version>
 		<Title>Shimmer for .NET MAUI</Title>
 		<Description>A shimmer/skeleton-loading control for .NET MAUI.</Description>
 		<PackageTags>maui;shimmer;skeleton;loading;animation;ios;android</PackageTags>
